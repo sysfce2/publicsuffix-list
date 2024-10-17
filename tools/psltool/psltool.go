@@ -14,11 +14,14 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
+	"unicode"
 
 	"github.com/creachadair/command"
 	"github.com/creachadair/flax"
 	"github.com/creachadair/mds/mdiff"
 	"github.com/natefinch/atomic"
+	"github.com/publicsuffix/list/tools/internal/githistory"
 	"github.com/publicsuffix/list/tools/internal/github"
 	"github.com/publicsuffix/list/tools/internal/parser"
 )
@@ -42,11 +45,14 @@ By default, the given file is updated in place.`,
 			},
 			{
 				Name:  "validate",
-				Usage: "<path>",
+				Usage: "<path or git commit hash>",
 				Help: `Check that a file is a valid PSL file.
 
 Validation includes basic issues like parse errors, as well as
-conformance with the PSL project's style rules and policies.`,
+conformance with the PSL project's style rules and policies.
+
+The argument can be either a local file, or a git commit hash to fetch
+from https://github.com/publicsuffix/list.`,
 				SetFlags: command.Flags(flax.MustBind, &validateArgs),
 				Run:      command.Adapt(runValidate),
 			},
@@ -129,20 +135,65 @@ func runFmt(env *command.Env, path string) error {
 }
 
 var validateArgs struct {
-	Online bool `flag:"online-checks,Run validations that require querying third-party servers"`
+	Owner  string `flag:"gh-owner,default=publicsuffix,Owner of the github repository to check"`
+	Repo   string `flag:"gh-repo,default=list,Github repository to check"`
+	Clone  string `flag:"gh-local-clone,Path to a local clone of the repository specified by gh-owner/gh-repo"`
+	Online bool   `flag:"online-checks,Run validations that require querying third-party servers"`
 }
 
-func runValidate(env *command.Env, path string) error {
-	bs, err := os.ReadFile(path)
+func isHex(s string) bool {
+	for _, r := range s {
+		if !unicode.In(r, unicode.ASCII_Hex_Digit) {
+			return false
+		}
+	}
+	return true
+}
+
+func runValidate(env *command.Env, pathOrHash string) error {
+	var bs []byte
+	var err error
+
+	client := github.Repo{
+		Owner: checkPRArgs.Owner,
+		Repo:  checkPRArgs.Repo,
+	}
+
+	isPath := false
+	if _, err = os.Stat(pathOrHash); err == nil {
+		// input is a local file
+		isPath = true
+		bs, err = os.ReadFile(pathOrHash)
+	} else if isHex(pathOrHash) {
+		// input looks like a git hash
+		bs, err = client.PSLForHash(context.Background(), pathOrHash)
+	} else {
+		return fmt.Errorf("Failed to read PSL file %q, not a local file or a git commit hash", pathOrHash)
+	}
 	if err != nil {
-		return fmt.Errorf("Failed to read PSL file: %w", err)
+		return fmt.Errorf("Failed to read PSL file %q: %w", pathOrHash, err)
 	}
 
 	psl, errs := parser.Parse(bs)
 	errs = append(errs, psl.Clean()...)
 	errs = append(errs, parser.ValidateOffline(psl)...)
 	if validateArgs.Online {
-		// TODO: no online validations implemented yet.
+		if validateArgs.Clone == "" && isPath {
+			// Assume the PSL file being validated might be in a git
+			// clone, and try to use that as the reference for history.
+			validateArgs.Clone = filepath.Dir(pathOrHash)
+		}
+		if validateArgs.Clone == "" {
+			return errors.New("--gh-local-clone is required for full validation")
+		}
+		prHistory, err := githistory.GetPRInfo(validateArgs.Clone)
+		if err != nil {
+			return fmt.Errorf("failed to get local PR history, refusing to run full validation to avoid Github DoS: %w", err)
+		}
+
+		ctx, cancel := context.WithTimeout(env.Context(), 1200*time.Second)
+		defer cancel()
+		errs = append(errs, parser.ValidateOnline(ctx, psl, &client, prHistory)...)
 	}
 
 	clean := psl.MarshalPSL()
@@ -167,6 +218,7 @@ func runValidate(env *command.Env, path string) error {
 var checkPRArgs struct {
 	Owner  string `flag:"gh-owner,default=publicsuffix,Owner of the github repository to check"`
 	Repo   string `flag:"gh-repo,default=list,Github repository to check"`
+	Clone  string `flag:"gh-local-clone,Path to a local clone of the repository specified by gh-owner/gh-repo"`
 	Online bool   `flag:"online-checks,Run validations that require querying third-party servers"`
 }
 
@@ -176,7 +228,7 @@ func runCheckPR(env *command.Env, prStr string) error {
 		return fmt.Errorf("invalid PR number %q: %w", prStr, err)
 	}
 
-	client := github.Client{
+	client := github.Repo{
 		Owner: checkPRArgs.Owner,
 		Repo:  checkPRArgs.Repo,
 	}
@@ -190,8 +242,18 @@ func runCheckPR(env *command.Env, prStr string) error {
 	after.SetBaseVersion(before, true)
 	errs = append(errs, after.Clean()...)
 	errs = append(errs, parser.ValidateOffline(after)...)
-	if validateArgs.Online {
-		// TODO: no online validations implemented yet.
+	if checkPRArgs.Online {
+		var prHistory *githistory.History
+		if validateArgs.Clone != "" {
+			prHistory, err = githistory.GetPRInfo(validateArgs.Clone)
+			if err != nil {
+				return fmt.Errorf("failed to get local PR history: %w", err)
+			}
+		}
+
+		ctx, cancel := context.WithTimeout(env.Context(), 300*time.Second)
+		defer cancel()
+		errs = append(errs, parser.ValidateOnline(ctx, after, &client, prHistory)...)
 	}
 
 	clean := after.MarshalPSL()
@@ -225,12 +287,12 @@ func runCheckPR(env *command.Env, prStr string) error {
 	}
 
 	if l := len(errs); l == 0 {
-		fmt.Fprintln(env, "PSL file is valid")
+		fmt.Fprintln(env, "PSL change is valid")
 		return nil
 	} else if l == 1 {
-		return errors.New("file has 1 error")
+		return errors.New("change has 1 error")
 	} else {
-		return fmt.Errorf("file has %d errors", l)
+		return fmt.Errorf("change has %d errors", l)
 	}
 }
 
