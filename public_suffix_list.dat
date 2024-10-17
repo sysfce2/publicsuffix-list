@@ -6723,7 +6723,7 @@ org.zw
 
 // newGTLDs
 
-// List of new gTLDs imported from https://www.icann.org/resources/registries/gtlds/v2/gtlds.json on 2024-08-25T15:14:38Z
+// List of new gTLDs imported from https://www.icann.org/resources/registries/gtlds/v2/gtlds.json on 2024-10-17T15:20:22Z
 // This list is auto-generated, don't edit it manually.
 // aaa : American Automobile Association, Inc.
 // https://www.iana.org/domains/root/db/aaa.html
@@ -7669,10 +7669,6 @@ cymru
 // https://www.iana.org/domains/root/db/cyou.html
 cyou
 
-// dabur : Dabur India Limited
-// https://www.iana.org/domains/root/db/dabur.html
-dabur
-
 // dad : Charleston Road Registry Inc.
 // https://www.iana.org/domains/root/db/dad.html
 dad
@@ -8405,11 +8401,11 @@ haus
 // https://www.iana.org/domains/root/db/hbo.html
 hbo
 
-// hdfc : HOUSING DEVELOPMENT FINANCE CORPORATION LIMITED
+// hdfc : HDFC BANK LIMITED
 // https://www.iana.org/domains/root/db/hdfc.html
 hdfc
 
-// hdfcbank : HDFC Bank Limited
+// hdfcbank : HDFC BANK LIMITED
 // https://www.iana.org/domains/root/db/hdfcbank.html
 hdfcbank
 
@@ -9117,6 +9113,10 @@ men
 // https://www.iana.org/domains/root/db/menu.html
 menu
 
+// merck : Merck Registry Holdings, Inc.
+// https://www.iana.org/domains/root/db/merck.html
+merck
+
 // merckmsd : MSD Registry Holdings, Inc.
 // https://www.iana.org/domains/root/db/merckmsd.html
 merckmsd
@@ -9329,7 +9329,7 @@ nissay
 // https://www.iana.org/domains/root/db/nokia.html
 nokia
 
-// norton : NortonLifeLock Inc.
+// norton : Gen Digital Inc.
 // https://www.iana.org/domains/root/db/norton.html
 norton
 
