@@ -1,0 +1,20 @@
+name: psltool PR check
+
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+      - name: run validations
+        run: |
+          cd tools
+          go run ./psltool fmt -d ../public_suffix_list.dat && go run ./psltool check-pr --gh-owner ${{ github.event.repository.owner.login }} --gh-repo ${{ github.event.repository.name }} --online-checks ${{ github.event.pull_request.number }}
