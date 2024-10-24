@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 
 	"golang.org/x/net/idna"
 	"golang.org/x/text/collate"
@@ -92,6 +93,19 @@ func (d Name) String() string {
 	return b.String()
 }
 
+// ASCIIString returns the domain name in its canonicalized ASCII (aka
+// "punycode") form.
+func (d Name) ASCIIString() string {
+	var b strings.Builder
+	for i := len(d.labels) - 1; i >= 0; i-- {
+		b.WriteString(d.labels[i].ASCIIString())
+		if i != 0 {
+			b.WriteByte('.')
+		}
+	}
+	return b.String()
+}
+
 // Compare compares domain names. It returns -1 if d < e, +1 if d > e,
 // and 0 if d == e.
 //
@@ -142,16 +156,31 @@ func (d Name) CutSuffix(suffix Name) (rest []Label, found bool) {
 	return ret, true
 }
 
-// AddPrefix returns d prefixed with label.
+// AddPrefix returns d prefixed with labels.
 //
-// For example, AddPrefix of "bar" to "foo.com" is "bar.foo.com".
-func (d Name) AddPrefix(label Label) (Name, error) {
+// For example, AddPrefix("qux", "bar") to "foo.com" is "qux.bar.foo.com".
+func (d Name) AddPrefix(labels ...Label) (Name, error) {
 	// Due to total name length restrictions, we have to fully
 	// re-check the shape of the extended domain name. The simplest
 	// way to do that is to round-trip through a string and leverage
 	// Parse again.
-	retStr := label.String() + "." + d.String()
+	parts := make([]string, 0, len(labels)+1)
+	for _, l := range labels {
+		parts = append(parts, l.String())
+	}
+	parts = append(parts, d.String())
+	retStr := strings.Join(parts, ".")
 	return Parse(retStr)
+}
+
+// MustAddPrefix is like AddPrefix, but panics if the formed prefix is
+// invalid instead of returning an error.
+func (d Name) MustAddPrefix(labels ...Label) Name {
+	ret, err := d.AddPrefix(labels...)
+	if err != nil {
+		panic(fmt.Sprintf("failed to add prefix %v to domain %q: %v", labels, d, err))
+	}
+	return ret
 }
 
 // Label is a domain name label.
@@ -175,6 +204,26 @@ func ParseLabel(s string) (Label, error) {
 }
 
 func (l Label) String() string { return l.label }
+
+func (l Label) ASCIIString() string {
+	ret, err := domainValidator.ToASCII(l.label)
+	if err != nil {
+		// This should be impossible. Domain labels can only be
+		// created by ParseLabel, which applies IDNA validation and
+		// produces a canonical U-label. We're just converting from
+		// U-label representation to A-label, which is guaranteed to
+		// succeed given a valid U-label.
+		panic(fmt.Sprintf("impossible: U-label to A-label conversion failed: %v", err))
+	}
+	return ret
+}
+
+// AsTLD returns the label as a top-level domain Name.
+func (l Label) AsTLD() Name {
+	return Name{
+		labels: []Label{l},
+	}
+}
 
 // Compare compares domain labels. It returns -1 if l < m, +1 if l > m,
 // and 0 if l == m.
@@ -203,10 +252,7 @@ func (l Label) Compare(m Label) int {
 	// If two labels aren't equal, we are free to order them however
 	// we want. We choose to order them with the English Unicode
 	// collation.
-	var buf collate.Buffer
-	kl := labelCollator.KeyFromString(&buf, l.label)
-	km := labelCollator.KeyFromString(&buf, m.label)
-	if res := bytes.Compare(kl, km); res != 0 {
+	if res := compareLabel(l, m); res != 0 {
 		return res
 	}
 
@@ -297,4 +343,18 @@ var domainValidator = idna.New(
 // byte compare. However, this option is buggy and silently ignored in
 // some cases (https://github.com/golang/go/issues/68379), so we do
 // this tie breaking ourselves in Label.Compare.
+var labelCollatorMu sync.Mutex
 var labelCollator = collate.New(language.English)
+
+func compareLabel(a, b Label) int {
+	// Unfortunately individual collators are not safe for concurrent
+	// use. Wrap them in a global mutex. We could also construct a new
+	// collator for each use, but that ends up being more expensive
+	// and less performant than sharing one collator with a mutex.
+	labelCollatorMu.Lock()
+	defer labelCollatorMu.Unlock()
+	var buf collate.Buffer
+	kl := labelCollator.KeyFromString(&buf, a.label)
+	km := labelCollator.KeyFromString(&buf, b.label)
+	return bytes.Compare(kl, km)
+}
