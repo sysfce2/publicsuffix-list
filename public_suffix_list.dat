@@ -6723,7 +6723,7 @@ org.zw
 
 // newGTLDs
 
-// List of new gTLDs imported from https://www.icann.org/resources/registries/gtlds/v2/gtlds.json on 2024-08-25T15:14:38Z
+// List of new gTLDs imported from https://www.icann.org/resources/registries/gtlds/v2/gtlds.json on 2024-12-21T15:23:38Z
 // This list is auto-generated, don't edit it manually.
 // aaa : American Automobile Association, Inc.
 // https://www.iana.org/domains/root/db/aaa.html
@@ -6953,7 +6953,7 @@ art
 // https://www.iana.org/domains/root/db/arte.html
 arte
 
-// asda : Wal-Mart Stores, Inc.
+// asda : Asda Stores Limited
 // https://www.iana.org/domains/root/db/asda.html
 asda
 
@@ -7668,10 +7668,6 @@ cymru
 // cyou : ShortDot SA
 // https://www.iana.org/domains/root/db/cyou.html
 cyou
-
-// dabur : Dabur India Limited
-// https://www.iana.org/domains/root/db/dabur.html
-dabur
 
 // dad : Charleston Road Registry Inc.
 // https://www.iana.org/domains/root/db/dad.html
@@ -8405,11 +8401,11 @@ haus
 // https://www.iana.org/domains/root/db/hbo.html
 hbo
 
-// hdfc : HOUSING DEVELOPMENT FINANCE CORPORATION LIMITED
+// hdfc : HDFC BANK LIMITED
 // https://www.iana.org/domains/root/db/hdfc.html
 hdfc
 
-// hdfcbank : HDFC Bank Limited
+// hdfcbank : HDFC BANK LIMITED
 // https://www.iana.org/domains/root/db/hdfcbank.html
 hdfcbank
 
@@ -9117,6 +9113,10 @@ men
 // https://www.iana.org/domains/root/db/menu.html
 menu
 
+// merck : Merck Registry Holdings, Inc.
+// https://www.iana.org/domains/root/db/merck.html
+merck
+
 // merckmsd : MSD Registry Holdings, Inc.
 // https://www.iana.org/domains/root/db/merckmsd.html
 merckmsd
@@ -9329,7 +9329,7 @@ nissay
 // https://www.iana.org/domains/root/db/nokia.html
 nokia
 
-// norton : NortonLifeLock Inc.
+// norton : Gen Digital Inc.
 // https://www.iana.org/domains/root/db/norton.html
 norton
 
@@ -10069,7 +10069,7 @@ ski
 // https://www.iana.org/domains/root/db/skin.html
 skin
 
-// sky : Sky International AG
+// sky : Sky UK Limited
 // https://www.iana.org/domains/root/db/sky.html
 sky
 
@@ -10777,7 +10777,7 @@ xin
 // https://www.iana.org/domains/root/db/xn--3bst00m.html
 集团
 
-// xn--3ds443g : TLD REGISTRY LIMITED OY
+// xn--3ds443g : Beijing TLD Registry Technology Limited
 // https://www.iana.org/domains/root/db/xn--3ds443g.html
 在线
 
@@ -11133,7 +11133,7 @@ yahoo
 // https://www.iana.org/domains/root/db/yamaxun.html
 yamaxun
 
-// yandex : Yandex Europe B.V.
+// yandex : ADC Tech Netherlands B.V.
 // https://www.iana.org/domains/root/db/yandex.html
 yandex
 
